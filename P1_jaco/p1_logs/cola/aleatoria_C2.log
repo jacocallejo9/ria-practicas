@@ -1,0 +1,13 @@
+episodio  1 (colocar)  pasos   8  recompensa   -0.86  en banda  50.0 %  fuera_calzada
+episodio  2 (colocar)  pasos   6  recompensa   -0.05  en banda   0.0 %  fuera_calzada
+episodio  3 (escena )  pasos   9  recompensa    3.13  en banda 100.0 %  fuera_calzada
+episodio  4 (escena )  pasos   9  recompensa    1.13  en banda  22.2 %  fuera_calzada
+episodio  5 (colocar)  pasos   8  recompensa   -0.18  en banda   0.0 %  guia_perdido
+episodio  6 (colocar)  pasos  10  recompensa   -0.02  en banda  70.0 %  sin_pelota
+episodio  7 (colocar)  pasos   7  recompensa   -0.66  en banda  14.3 %  colision
+episodio  8 (colocar)  pasos   6  recompensa    0.03  en banda  66.7 %  fuera_calzada
+episodio  9 (colocar)  pasos   7  recompensa   -0.91  en banda  14.3 %  fuera_calzada
+episodio 10 (colocar)  pasos  15  recompensa    1.05  en banda  26.7 %  guia_perdido
+
+Recompensa media 0.27 (desviación 1.16) -> p1_logs/aleatoria_C3/monitor.csv
+FIN OK
