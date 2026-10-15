@@ -14,7 +14,7 @@ como un GRADO DE CUMPLIMIENTO en [0, 1], construido sólo con umbrales que
 ya fija el problema (el protocolo del anexo B y la geometría de la
 cámara), y los objetivos se combinan con un Y lógico, el producto:
 
-    r_tarea = C_sep(d) · C_ori(θ) · [C_carril(e)]
+    r_tarea = C_sep(d) · C_ori(θ)
 
   - Un paso vale 1 sólo si se cumplen todos los objetivos a la vez y 0 si
     cualquiera de ellos falla del todo: ninguno compensa a otro, así que
@@ -26,7 +26,7 @@ Sobre esa base hay dos términos más, que tampoco son pesos sino
 consecuencia de la formulación:
 
   - Moldeado basado en potencial (Ng, Harada y Russell, 1999):
-        F = γ·Φ(d') − Φ(d)
+        F = γ·Φ(d') - Φ(d)
     Φ mide lo cerca que está la separación del centro de la banda. F es,
     en la práctica, la VELOCIDAD RELATIVA con signo: positivo si el
     seguidor se mueve hacia el centro de la banda, negativo si se aleja de
@@ -36,7 +36,7 @@ consecuencia de la formulación:
     óptima (sólo acelera el aprendizaje), así que tampoco hay que
     calibrar su escala frente a r_tarea. Requisitos: el mismo γ que el
     algoritmo y Φ = 0 en los estados terminales.
-  - Fallo: −1 en el paso en el que el episodio termina por un fallo. Es
+  - Fallo: -1 en el paso en el que el episodio termina por un fallo. Es
     el valor opuesto al de un paso perfecto: hace que fallar sea peor que
     el peor paso vivo (0), que si no serían indistinguibles.
 
@@ -65,13 +65,6 @@ C_ori(θ)   θ = ángulo de la pelota respecto al eje de la cámara,
            límites de fallo (0,12 y 0,90 m). Inferible como C_sep, y su
            variación lo es por el cambio del tamaño del blob (obs. [5]).
 
-C_carril(e) (OPCIONAL, "carril.en_recompensa")  e = error lateral real.
-           NO es inferible desde los sensores (apartado 4 del enunciado):
-           por eso está desactivado por defecto y el carril se usa como
-           condición de fin de episodio. Si se activa hay que justificarlo
-           en la memoria. Geometría del carril:
-               1 si |e| ≤ (0,22 − 0,16)/2 = 0,03 m (robot entero dentro)
-               lineal hasta 0 en |e| = 0,11 m (centro sobre la raya)
 
 Ejecutar este archivo imprime una tabla con los valores de cada término,
 útil para la memoria:   python3 p1_recompensa.py
@@ -179,7 +172,7 @@ if __name__ == '__main__':
         print('   {:4.0f}            {:4.2f}'.format(
             a, R.cumplimiento_orientacion(math.radians(a), True)))
 
-    print('\nMoldeado F = γΦ(d\') − Φ(d) en un paso de 0,3 s con d en la banda:')
+    print('\nMoldeado F = γΦ(d\') - Φ(d) en un paso de 0,3 s con d en la banda:')
     for vrel in [-0.10, -0.05, 0.0, 0.05, 0.10]:
         d0 = 0.40
         d1 = d0 + vrel * 0.3
