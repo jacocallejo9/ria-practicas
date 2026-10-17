@@ -14,10 +14,10 @@
   "espera_reset_s": 0.5,
   "espera_pelota_s": 2.0,
   "accion": {
-    "v_min": -0.05,
+    "v_min": 0.0,
     "v_max": 0.35,
     "w_max": 0.6,
-    "_accion": "Velocidades REALES. v negativa permite retroceder si el guía frena en seco; v_max = 1,6 veces el p95 de la velocidad del guía (0,22 m/s medida con --grabar-linea en crucero 10-40) para poder recuperar distancia tras las curvas. w_max: más giro haría salir la pelota de la imagen en un paso.",
+    "_accion": "Velocidades REALES. v_min = 0: el seguidor nunca retrocede (puede pararse del todo si el guía frena). v_max = 1,6 veces el p95 de la velocidad del guía (0,22 m/s medida con --grabar-linea en crucero 10-40) para poder recuperar distancia tras las curvas. w_max: más giro haría salir la pelota de la imagen en un paso.",
     "factor_v": 1.975,
     "factor_w": 1.722,
     "_factor": "PROVISIONAL. Velocidad real / velocidad pedida a cmd_vel (en RoboboSim el robot va más rápido de lo que dice la cinemática del puente). Se mide con --calibrar-movimiento; en el robot real hay que volver a medirlo.",
@@ -114,12 +114,12 @@
     "activo": true,
     "pasos": 1000,
     "v": [
-      -0.5,
+      -0.71,
       1.0
     ],
     "girar_hacia_pelota": true,
     "ganancia_giro": 0.8,
     "ruido_w": 0.3,
-    "_calentamiento": "Sólo SAC y sólo en entrenamientos nuevos: los primeros \"pasos\" pasos (los learning_starts, que si no son acciones uniformes al azar) son avanzar. v es la acción lineal normalizada (-0,5..1 = 0,05..0,35 m/s reales); el giro es -ganancia_giro·x de la pelota (para no perderla en las curvas) ± ruido_w. Así el búfer empieza con experiencia útil y SAC aprende antes."
+    "_calentamiento": "Sólo SAC y sólo en entrenamientos nuevos: los primeros \"pasos\" pasos (los learning_starts, que si no son acciones uniformes al azar) son avanzar. v es la acción lineal normalizada (-0,71..1 = 0,05..0,35 m/s reales); el giro es -ganancia_giro·x de la pelota (para no perderla en las curvas) ± ruido_w. Así el búfer empieza con experiencia útil y SAC aprende antes."
   }
 }
