@@ -26,7 +26,7 @@ Sobre esa base hay dos términos más, que tampoco son pesos sino
 consecuencia de la formulación:
 
   - Moldeado basado en potencial (Ng, Harada y Russell, 1999):
-        F = γ·Φ(d') - Φ(d)
+        F = γ·Φ(d') − Φ(d)
     Φ mide lo cerca que está la separación del centro de la banda. F es,
     en la práctica, la VELOCIDAD RELATIVA con signo: positivo si el
     seguidor se mueve hacia el centro de la banda, negativo si se aleja de

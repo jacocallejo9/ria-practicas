@@ -73,8 +73,13 @@ from p1_comun import (cargar_config, ConvencionRumbo, LineaCentral, ModeloCamara
 from p1_recompensa import Recompensa
 
 AVISO_CONGELADO = (
-    '*** El simulador está congelado (no se mueve nada). RoboboSim sólo avanza con '
-    'su ventana en primer plano: haz clic en ella. Esperando... ***')
+    '*** El robot no se mueve aunque se le manda girar. Dos causas posibles:\n'
+    '    1. La ventana de RoboboSim no está en primer plano (sin foco congela la física):\n'
+    '       haz clic en ella.\n'
+    '    2. Has cerrado/reabierto RoboboSim o recargado el mundo después de lanzar el\n'
+    '       puente: el puente pierde la conexión y no se reconecta solo. Reinícialo\n'
+    '       (Ctrl-C en su terminal y otra vez ros2 run ... modules:="[\'blob\']").\n'
+    '    Esperando... ***')
 
 ESPERA_MAX_S = 3.0         # espera máxima de un mensaje de blobs (se publican a 5 Hz)
 ESPERA_FRAME_S = 0.6       # espera máxima a que cambie el blob (en RoboboSim cambia a ~1,8 Hz)

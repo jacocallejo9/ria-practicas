@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+# Copias intermedias y TensorBoard de cada entrenamiento (pesan y no hacen falta)
+**/p1_logs/**/checkpoints/
+**/p1_logs/**/tb_*/

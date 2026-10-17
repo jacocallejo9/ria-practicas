@@ -1,0 +1,41 @@
+=== ARRANQUE (PowerShell, en pc-robobo\Windows) ===
+docker compose start
+.\terminal.ps1          (una vez por cada terminal: puente y ejecución)
+
+Antes: RoboboSim abierto en Follow City, guía configurado y Apply.
+  C1 = Mode 1, 10-10    C2 = Mode 1, 10-40    C3 = Mode 2, 10-40
+
+
+=== TERMINAL PUENTE ===
+source /root/robobo_ws/install/setup.bash
+ros2 run robobo_ros2 robobo_container --ros-args -p ip:=host.docker.internal -p modules:="['blob']"
+
+(Si se cierra/reabre RoboboSim o se recarga el mundo: Ctrl-C y volver a lanzarlo.)
+
+
+=== TERMINAL EJECUCIÓN ===
+cd /docker-ros/ws && source /root/robobo_ws/install/setup.bash
+
+# Línea base aleatoria
+python3 p1_seguidor.py --aleatorio --episodios 10 --etiqueta C2
+
+# Entrenar (parada temprana activada; --pasos es el máximo)
+python3 p1_seguidor.py --entrenar --algoritmo sac --pasos 20000 --semilla 0 --etiqueta C2
+python3 p1_seguidor.py --entrenar --algoritmo ppo --pasos 12648 --semilla 0 --etiqueta C2 --sin-parada
+python3 p1_seguidor.py --entrenar --algoritmo sac --pasos 12648 --semilla 1 --etiqueta C2 --sin-parada
+
+# Continuar un entrenamiento parado con Ctrl-C (--pasos = los que faltan)
+python3 p1_seguidor.py --entrenar --algoritmo sac --pasos 5000 --semilla 0 --etiqueta C2 --continuar p1_logs/definitivos/sac_C2_s0/modelo.zip
+
+# Evaluar (protocolo anexo B) y tabla de métricas
+python3 p1_seguidor.py --evaluar --modelo p1_logs/definitivos/sac_C2_s0/modelo --configuracion C2 --episodios 3
+python3 p1_seguidor.py --evaluar --modelo aleatoria --configuracion C2 --episodios 3
+python3 p1_protocolo.py p1_eval/definitivos/*.csv
+
+# Ejecutar la política (vídeos)
+python3 p1_seguidor.py --ejecutar --modelo p1_logs/definitivos/sac_C2_s0/modelo
+
+
+=== AL TERMINAR (PowerShell) ===
+Ctrl-C en el puente
+docker compose stop      (NUNCA "down")
