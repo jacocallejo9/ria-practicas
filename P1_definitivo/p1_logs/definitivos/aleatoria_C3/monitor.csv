@@ -1,0 +1,12 @@
+#{"t_start": 1792351708.0075955, "env_id": "None"}
+r,l,t,causa
+-0.544649,6,5.269887,fuera_calzada
+-1.728579,4,9.266757,fuera_calzada
+-0.776338,5,17.666863,fuera_calzada
+-0.013018,10,29.266616,guia_perdido
+-0.243472,4,32.66641,fuera_calzada
+-0.978309,9,38.067238,sin_pelota
+-1.869425,4,43.066599,fuera_calzada
+-0.090924,9,48.466677,sin_pelota
+0.770568,11,55.267109,sin_pelota
+1.735421,6,60.06576,fuera_calzada
