@@ -58,8 +58,8 @@ import numpy as np
 from p1_comun import (cargar_config, guardar_config, angulo_hacia, ConvencionRumbo,
                       ModeloCamara, ajustar_distancia, ajustar_fov, fallo_protocolo)
 
-RUTA_LOGS = 'p1_logs'
-RUTA_EVAL = 'p1_eval'
+RUTA_LOGS = os.path.join('p1_logs', 'definitivos')   # los anteriores, en p1_logs/anteriores
+RUTA_EVAL = os.path.join('p1_eval', 'definitivos')
 
 # Hiperparámetros. Cada paso cuesta ~0,3 s de tiempo real, así que se
 # ajustan los que dependen del número de pasos (ver la guía de la P1).
@@ -540,7 +540,56 @@ def modo_aleatorio(args):
 # --entrenar
 # =====================================================================
 
-def crear_parada_temprana(p, pasos_inicio=0):
+def clase_sac_con_avance(a):
+    """SAC cuyo calentamiento empieza avanzando, en vez de con acciones al azar.
+
+    SAC llena su búfer con learning_starts acciones uniformes antes de
+    aprender; en esta tarea casi todas son giros sin sentido que pierden al
+    guía en pocos pasos. Durante los primeros a['pasos'] pasos del
+    entrenamiento (sólo en un entrenamiento nuevo: al continuar ya se han
+    superado) la acción es avanzar:
+      - velocidad: uniforme en a['v'] (acción normalizada en [-1, 1]), para
+        que el búfer tenga avances lentos y rápidos;
+      - giro: si a['girar_hacia_pelota'], proporcional a la x de la pelota
+        (componente 1 de la observación) para no perderla en las curvas, más
+        un ruido uniforme de ±a['ruido_w']; si no, sólo el ruido.
+    El resto del calentamiento (hasta learning_starts) sigue siendo aleatorio,
+    y el aprendizaje no cambia. No se aplica a PPO: es on-policy y aprende de
+    la probabilidad de sus propias acciones.
+    """
+    from stable_baselines3 import SAC
+
+    class SACConAvance(SAC):
+        def _sample_action(self, learning_starts, action_noise=None, n_envs=1):
+            if self.num_timesteps >= a['pasos']:
+                return super()._sample_action(learning_starts, action_noise, n_envs)
+            rng = np.random.default_rng()
+            obs = np.asarray(self._last_obs).reshape(n_envs, -1)
+            acciones = []
+            for o in obs:
+                v = rng.uniform(*a['v'])
+                w = rng.uniform(-a['ruido_w'], a['ruido_w'])
+                if a['girar_hacia_pelota'] and o[0] > 0.5:          # pelota visible
+                    # x > 0: pelota a la derecha -> girar a la derecha (w < 0)
+                    w -= a['ganancia_giro'] * float(o[1])
+                acciones.append([v, np.clip(w, -1.0, 1.0)])
+            unscaled_action = np.array(acciones, dtype=np.float32)
+            scaled_action = self.policy.scale_action(unscaled_action)
+            return self.policy.unscale_action(scaled_action), scaled_action
+
+    return SACConAvance
+
+
+def leer_historial(ruta_monitor):
+    """(recompensa, causa) de los episodios ya registrados en un monitor.csv."""
+    if not os.path.exists(ruta_monitor):
+        return []
+    with open(ruta_monitor, newline='') as f:
+        f.readline()                                   # cabecera JSON de Monitor
+        return [(float(x['r']), x.get('causa', '')) for x in csv.DictReader(f)]
+
+
+def crear_parada_temprana(p, pasos_inicio=0, historial=()):
     """Callback de Stable-Baselines3 que corta el entrenamiento cuando basta.
 
     Usa los propios episodios de entrenamiento (no hay evaluaciones aparte:
@@ -555,7 +604,10 @@ def crear_parada_temprana(p, pasos_inicio=0):
         superado su mejor valor en más de p['mejora_minima'] (fracción) en
         los últimos p['paciencia_pasos'] pasos.
 
-    Nunca antes de p['pasos_minimos'] pasos de este entrenamiento.
+    Nunca antes de p['pasos_minimos'] pasos del entrenamiento (en total,
+    contando las partes anteriores si se ha reanudado con --continuar). Al
+    reanudar, la ventana se rellena con los últimos episodios del historial
+    (monitor.csv), para no tener que esperar otros 20 episodios.
     """
     from collections import deque
     from stable_baselines3.common.callbacks import BaseCallback
@@ -564,6 +616,9 @@ def crear_parada_temprana(p, pasos_inicio=0):
         def __init__(self):
             super().__init__()
             self.ventana = deque(maxlen=p['ventana_episodios'])
+            for r, causa in historial:
+                if causa != 'congelado':
+                    self.ventana.append((r, causa == 'tiempo'))
             self.mejor, self.paso_mejor = None, pasos_inicio
             self.motivo = ''
 
@@ -573,8 +628,7 @@ def crear_parada_temprana(p, pasos_inicio=0):
                 if ep is None or ep.get('causa') == 'congelado':
                     continue
                 self.ventana.append((ep['r'], ep.get('causa') == 'tiempo'))
-            hechos = self.num_timesteps - pasos_inicio
-            if len(self.ventana) < self.ventana.maxlen or hechos < p['pasos_minimos']:
+            if len(self.ventana) < self.ventana.maxlen or self.num_timesteps < p['pasos_minimos']:
                 return True
             media = float(np.mean([r for r, _ in self.ventana]))
             completos = 100.0 * np.mean([c for _, c in self.ventana])
@@ -624,6 +678,13 @@ def modo_entrenar(args):
         except ImportError:
             tb = None
         Algoritmo = SAC if args.algoritmo == 'sac' else PPO
+        avance = cfg.get('calentamiento_avance', {})
+        if args.algoritmo == 'sac' and avance.get('activo'):
+            Algoritmo = clase_sac_con_avance(avance)
+            if not args.continuar:
+                print('Calentamiento: los primeros {} pasos, avanzar (v normalizada en {}, giro '
+                      '{}hacia la pelota).'.format(avance['pasos'], avance['v'],
+                                                   '' if avance['girar_hacia_pelota'] else 'no '))
         hiper = dict(HIPER_SAC if args.algoritmo == 'sac' else HIPER_PPO,
                      gamma=cfg['recompensa']['gamma'])
 
@@ -644,7 +705,8 @@ def modo_entrenar(args):
                                         name_prefix='modelo')]
         parada = cfg.get('parada_temprana', {})
         if parada.get('activa') and not args.sin_parada:
-            callbacks.append(crear_parada_temprana(parada, pasos0))
+            historial = leer_historial(os.path.join(directorio, 'monitor.csv')) if args.continuar else []
+            callbacks.append(crear_parada_temprana(parada, pasos0, historial))
         print('\nEntrenando {} durante {} pasos como máximo (semilla {}) -> {}'.format(
             args.algoritmo.upper(), args.pasos, args.semilla, directorio))
         if len(callbacks) > 1:
@@ -659,6 +721,10 @@ def modo_entrenar(args):
                          tb_log_name='tb', reset_num_timesteps=not args.continuar)
         except KeyboardInterrupt:
             print('\nEntrenamiento interrumpido por el usuario.')
+        except RuntimeError as e:
+            # P. ej. se apaga la pantalla y RoboboSim deja de publicar blobs:
+            # se guarda lo aprendido para poder seguir con --continuar.
+            print('\nEntrenamiento interrumpido por un error: {}'.format(e))
         ruta_modelo = os.path.join(directorio, 'modelo')
         modelo.save(ruta_modelo)
         if args.algoritmo == 'sac':
@@ -674,6 +740,26 @@ def modo_entrenar(args):
 # =====================================================================
 # --evaluar : protocolo del anexo B
 # =====================================================================
+
+def config_del_modelo(args):
+    """Configuración con la que ejecutar un modelo ya entrenado.
+
+    La acción y la observación dependen de la configuración (w_max, v_max,
+    factores, modelo de la cámara...): un modelo hay que ejecutarlo con la
+    misma con la que se entrenó, que --entrenar guarda en
+    p1_logs/<run>/config.json. Se usa ésa salvo que se pase --config.
+    """
+    if args.config is not None:
+        return args.config
+    if args.modelo and args.modelo != 'aleatoria':
+        d = os.path.dirname(args.modelo.replace('.zip', ''))
+        for ruta in (os.path.join(d, 'config.json'),                   # p1_logs/<run>/modelo
+                     os.path.join(os.path.dirname(d), 'config.json')):  # .../checkpoints/modelo_N_steps
+            if os.path.exists(ruta):
+                print('Configuración del modelo: ' + ruta)
+                return ruta
+    return 'p1_config.json'
+
 
 def cargar_politica(args, env):
     """Devuelve (función obs -> acción, nombre). 'aleatoria' es la línea base."""
@@ -705,7 +791,7 @@ def modo_evaluar(args):
     'congelado' y hay que repetirlo.
     """
     from p1_protocolo import RegistroEvaluacion, leer_episodios, agrupar, imprimir_tabla
-    cfg = cargar_config(args.config)
+    cfg = cargar_config(config_del_modelo(args))
     p = cfg['protocolo']
     env = crear_env(args, modo='protocolo', config=cfg, pasos_max=10 ** 9)
     politica, nombre = cargar_politica(args, env)
@@ -773,7 +859,7 @@ def modo_ejecutar(args):
     --sin-simulador (robot real) no hay verdad del terreno: ni recompensa
     ni terminaciones, sólo la política sobre los sensores.
     """
-    env = crear_env(args, modo='protocolo', pasos_max=10 ** 9)
+    env = crear_env(args, modo='protocolo', config=config_del_modelo(args), pasos_max=10 ** 9)
     politica, nombre = cargar_politica(args, env)
     print('Ejecutando {} (Ctrl-C para parar)'.format(nombre))
     try:
@@ -812,7 +898,8 @@ def main():
     p.add_argument('--configuracion', default='C3', choices=['C1', 'C2', 'C3', 'otra'],
                    help='configuración del guía en la evaluación (sólo se anota)')
     p.add_argument('--sin-pausa', action='store_true', help='--evaluar sin esperar a Enter')
-    p.add_argument('--config', default='p1_config.json')
+    p.add_argument('--config', default=None,
+                   help='por defecto p1_config.json; con --evaluar/--ejecutar, la guardada con el modelo')
     p.add_argument('--sin-simulador', action='store_true')
     p.add_argument('--detalle', action='store_true', help='una línea por paso')
     p.add_argument('--no-guardar', action='store_true', help='--calibrar-movimiento sin tocar la config')
@@ -828,6 +915,8 @@ def main():
     args = p.parse_args()
 
     os.makedirs(RUTA_LOGS, exist_ok=True)
+    if args.config is None and not (args.evaluar or args.ejecutar):
+        args.config = 'p1_config.json'
     if args.calibrar_movimiento:
         modo_calibrar_movimiento(args)
     elif args.barrido_tilt:
