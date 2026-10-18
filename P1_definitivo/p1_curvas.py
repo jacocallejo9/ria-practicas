@@ -15,13 +15,20 @@ Cumple los requisitos del apartado "Curvas de aprendizaje" del enunciado:
     el mismo entorno (p1_seguidor.py --aleatorio).
 
 Cada grupo (por ejemplo SAC y PPO) se da como nombre=patrón; el patrón
-apunta a los directorios de las semillas (o a sus monitor.csv):
+apunta a los directorios de las semillas (o a sus monitor.csv). Usar
+s[0-9] y no s*, para no coger carpetas como sac_C3_s2_ext:
 
-    python3 p1_curvas.py --grupo "SAC=p1_logs/sac_C3_s*" \\
-                         --grupo "PPO=p1_logs/ppo_C3_s*" \\
-                         --aleatoria p1_logs/aleatoria_C3 \\
-                         --ventana 10 --titulo "Guía C3 (variable 10-40)" \\
+    python3 p1_curvas.py --grupo "SAC=p1_logs/definitivos/sac_C3_s[0-9]" \\
+                         --grupo "PPO=p1_logs/definitivos/ppo_C3_s0" \\
+                         --aleatoria p1_logs/definitivos/aleatoria_C3 \\
+                         --ventana 10 --paso-s 0.56 --titulo "Guía C3 (variable 10-40)" \\
                          --salida figuras/curvas_C3
+
+Cada ejecución genera UNA figura (<salida>.png y .pdf) con 2 + N paneles:
+recompensa, duración y un panel de causas por grupo. Si cada grupo es un
+solo modelo, se dibuja cada uno por separado (sin media ni banda). La
+media y la banda de un grupo llegan hasta donde acaba su semilla más
+corta; la serie tenue de cada semilla se dibuja entera.
 
 No usa ROS 2. Si el matplotlib del contenedor falla por la versión de
 NumPy, se puede ejecutar en Windows (python p1_curvas.py ...) porque sólo
@@ -44,7 +51,6 @@ COLORES = ['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:brown']
 COLORES_CAUSA = {'tiempo': 'tab:green', 'colision': 'tab:red', 'guia_perdido': 'tab:orange',
                  'sin_pelota': 'tab:purple', 'fuera_calzada': 'tab:brown',
                  'fuera_carril': 'tab:pink', 'adelanta': 'tab:gray'}
-ESTILOS = ['-', '--', ':', '-.']
 
 
 def leer_monitor(ruta):
@@ -85,9 +91,18 @@ def expandir(patron):
                                                 else os.path.join(r, 'monitor.csv'))]
 
 
-def panel(ax, grupos, campo, ventana, rejilla, etiqueta_y, referencia=None):
+def rejilla_grupo(runs):
+    """Pasos donde se promedian las semillas de un grupo: desde que todas
+    han terminado su primer episodio hasta donde llegan TODAS (así la banda
+    no mezcla tramos con distinto número de semillas). Cada grupo tiene la
+    suya, para no cortar a uno más largo que otro."""
+    return np.linspace(max(r['pasos'][0] for r in runs), min(r['pasos'][-1] for r in runs), 300)
+
+
+def panel(ax, grupos, campo, ventana, etiqueta_y, referencia=None):
     for k, (nombre, runs) in enumerate(grupos):
         color = COLORES[k % len(COLORES)]
+        rejilla = rejilla_grupo(runs)
         suav = []
         for run in runs:
             y = run[campo]
@@ -96,7 +111,7 @@ def panel(ax, grupos, campo, ventana, rejilla, etiqueta_y, referencia=None):
         suav = np.array(suav)
         media = np.nanmean(suav, axis=0)
         ax.plot(rejilla, media, color=color, lw=2,
-                label='{} (media de {} semilla{})'.format(nombre, len(runs), 's' if len(runs) > 1 else ''))
+                label=nombre if len(runs) == 1 else '{} (media de {} semillas)'.format(nombre, len(runs)))
         if len(runs) > 1:
             ax.fill_between(rejilla, np.nanmin(suav, axis=0), np.nanmax(suav, axis=0),
                             color=color, alpha=0.25, lw=0, label='{}: mínimo-máximo'.format(nombre))
@@ -108,17 +123,18 @@ def panel(ax, grupos, campo, ventana, rejilla, etiqueta_y, referencia=None):
     ax.legend(fontsize=8, loc='best')
 
 
-def panel_causas(ax, grupos, ventana, rejilla):
-    causas = sorted({c for _, runs in grupos for run in runs for c in run['causas']})
-    for k, (nombre, runs) in enumerate(grupos):
-        for causa in causas:
-            series = []
-            for run in runs:
-                ind = np.array([1.0 if c == causa else 0.0 for c in run['causas']])
-                series.append(en_rejilla(run['pasos'], media_movil(ind, ventana), rejilla))
-            ax.plot(rejilla, 100.0 * np.nanmean(series, axis=0),
-                    color=COLORES_CAUSA.get(causa, 'k'), ls=ESTILOS[k % len(ESTILOS)], lw=1.6,
-                    label='{} · {}'.format(nombre, causa) if len(grupos) > 1 else causa)
+def panel_causas(ax, nombre, runs, ventana):
+    """Un panel por grupo: con varios grupos superpuestos no se lee."""
+    rejilla = rejilla_grupo(runs)
+    causas = sorted({c for run in runs for c in run['causas']})
+    for causa in causas:
+        series = []
+        for run in runs:
+            ind = np.array([1.0 if c == causa else 0.0 for c in run['causas']])
+            series.append(en_rejilla(run['pasos'], media_movil(ind, ventana), rejilla))
+        ax.plot(rejilla, 100.0 * np.nanmean(series, axis=0),
+                color=COLORES_CAUSA.get(causa, 'k'), lw=1.6, label=causa)
+    ax.set_title(nombre, fontsize=9, loc='left')
     ax.set_ylabel('Episodios que terminan\npor cada causa (%)')
     ax.set_ylim(-2, 102)
     ax.grid(alpha=0.3)
@@ -146,27 +162,33 @@ def main():
             raise SystemExit('Sin datos para el grupo ' + g)
         grupos.append((nombre, runs))
 
-    # Rejilla común: hasta donde llegan TODAS las semillas, para que la
-    # banda no mezcle tramos con distinto número de semillas.
-    # Empieza cuando todas han terminado su primer episodio (antes no hay dato).
-    inicio = max(run['pasos'][0] for _, runs in grupos for run in runs)
-    fin = min(run['pasos'][-1] for _, runs in grupos for run in runs)
-    rejilla = np.linspace(inicio, fin, 300)
-
     ref = None
     if args.aleatoria:
         ref = float(np.mean(leer_monitor(args.aleatoria)['r']))
 
-    fig, ejes = plt.subplots(3, 1, figsize=(8, 10), sharex=True)
-    panel(ejes[0], grupos, 'r', args.ventana, rejilla, 'Recompensa por episodio\n(adimensional)', ref)
+    n = 2 + len(grupos)
+    fig, ejes = plt.subplots(n, 1, figsize=(8, 2.6 * n + 0.6), sharex=True)
+    panel(ejes[0], grupos, 'r', args.ventana, 'Recompensa por episodio\n(adimensional)', ref)
     et_l = 'Duración del episodio\n(pasos{})'.format(
         ', 1 paso ≈ {:.2f} s'.format(args.paso_s) if args.paso_s else '')
-    panel(ejes[1], grupos, 'l', args.ventana, rejilla, et_l)
-    panel_causas(ejes[2], grupos, args.ventana, rejilla)
-    ejes[2].set_xlabel('Pasos del entorno (llamadas a step())')
-    n_sem = ', '.join('{} {} semilla{}'.format(n, len(r), 's' if len(r) > 1 else '') for n, r in grupos)
-    fig.suptitle('{}\n{}; media móvil de {} episodios; banda = mínimo-máximo; {} pasos'.format(
-        args.titulo, n_sem, args.ventana, int(fin)), fontsize=10)
+    panel(ejes[1], grupos, 'l', args.ventana, et_l)
+    for ax, (nombre, runs) in zip(ejes[2:], grupos):
+        panel_causas(ax, nombre, runs, args.ventana)
+    ejes[-1].set_xlabel('Pasos del entorno (llamadas a step())')
+    def pasos_totales(runs):
+        p = sorted(int(r['pasos'][-1]) for r in runs)
+        return '{} pasos'.format(p[0]) if p[0] == p[-1] else '{}-{} pasos'.format(p[0], p[-1])
+
+    # El enunciado (9.1) pide indicar semillas, ventana y número total de pasos.
+    if all(len(r) == 1 for _, r in grupos):
+        # Un modelo por grupo (p. ej. cada semilla por separado): sin medias ni bandas.
+        n_sem = ', '.join('{} {}'.format(n, pasos_totales(r)) for n, r in grupos)
+        subtitulo = '{}\nmedia móvil de {} episodios'.format(n_sem, args.ventana)
+    else:
+        n_sem = ', '.join('{} {} semilla{} ({})'.format(n, len(r), 's' if len(r) > 1 else '', pasos_totales(r))
+                          for n, r in grupos)
+        subtitulo = '{}\nmedia móvil de {} episodios; banda = mínimo-máximo'.format(n_sem, args.ventana)
+    fig.suptitle('{}\n{}'.format(args.titulo, subtitulo), fontsize=10)
     fig.tight_layout()
 
     os.makedirs(os.path.dirname(args.salida) or '.', exist_ok=True)

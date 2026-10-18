@@ -15,13 +15,20 @@ Cumple los requisitos del apartado "Curvas de aprendizaje" del enunciado:
     el mismo entorno (p1_seguidor.py --aleatorio).
 
 Cada grupo (por ejemplo SAC y PPO) se da como nombre=patrón; el patrón
-apunta a los directorios de las semillas (o a sus monitor.csv):
+apunta a los directorios de las semillas (o a sus monitor.csv). Usar
+s[0-9] y no s*, para no coger carpetas como sac_C3_s2_ext:
 
-    python3 p1_curvas.py --grupo "SAC=p1_logs/sac_C3_s*" \\
-                         --grupo "PPO=p1_logs/ppo_C3_s*" \\
-                         --aleatoria p1_logs/aleatoria_C3 \\
-                         --ventana 10 --titulo "Guía C3 (variable 10-40)" \\
+    python3 p1_curvas.py --grupo "SAC=p1_logs/definitivos/sac_C3_s[0-9]" \\
+                         --grupo "PPO=p1_logs/definitivos/ppo_C3_s0" \\
+                         --aleatoria p1_logs/definitivos/aleatoria_C3 \\
+                         --ventana 10 --paso-s 0.56 --titulo "Guía C3 (variable 10-40)" \\
                          --salida figuras/curvas_C3
+
+Cada ejecución genera UNA figura (<salida>.png y .pdf) con 2 + N paneles:
+recompensa, duración y un panel de causas por grupo. Si cada grupo es un
+solo modelo, se dibuja cada uno por separado (sin media ni banda). La
+media y la banda de un grupo llegan hasta donde acaba su semilla más
+corta; la serie tenue de cada semilla se dibuja entera.
 
 No usa ROS 2. Si el matplotlib del contenedor falla por la versión de
 NumPy, se puede ejecutar en Windows (python p1_curvas.py ...) porque sólo
