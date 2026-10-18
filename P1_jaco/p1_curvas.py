@@ -104,7 +104,7 @@ def panel(ax, grupos, campo, ventana, etiqueta_y, referencia=None):
         suav = np.array(suav)
         media = np.nanmean(suav, axis=0)
         ax.plot(rejilla, media, color=color, lw=2,
-                label='{} (media de {} semilla{})'.format(nombre, len(runs), 's' if len(runs) > 1 else ''))
+                label=nombre if len(runs) == 1 else '{} (media de {} semillas)'.format(nombre, len(runs)))
         if len(runs) > 1:
             ax.fill_between(rejilla, np.nanmin(suav, axis=0), np.nanmax(suav, axis=0),
                             color=color, alpha=0.25, lw=0, label='{}: mínimo-máximo'.format(nombre))
@@ -168,9 +168,20 @@ def main():
     for ax, (nombre, runs) in zip(ejes[2:], grupos):
         panel_causas(ax, nombre, runs, args.ventana)
     ejes[-1].set_xlabel('Pasos del entorno (llamadas a step())')
-    n_sem = ', '.join('{} {} semilla{}'.format(n, len(r), 's' if len(r) > 1 else '') for n, r in grupos)
-    fig.suptitle('{}\n{}\nmedia móvil de {} episodios; banda = mínimo-máximo'.format(
-        args.titulo, n_sem, args.ventana), fontsize=10)
+    def pasos_totales(runs):
+        p = sorted(int(r['pasos'][-1]) for r in runs)
+        return '{} pasos'.format(p[0]) if p[0] == p[-1] else '{}-{} pasos'.format(p[0], p[-1])
+
+    # El enunciado (9.1) pide indicar semillas, ventana y número total de pasos.
+    if all(len(r) == 1 for _, r in grupos):
+        # Un modelo por grupo (p. ej. cada semilla por separado): sin medias ni bandas.
+        n_sem = ', '.join('{} {}'.format(n, pasos_totales(r)) for n, r in grupos)
+        subtitulo = '{}\nmedia móvil de {} episodios'.format(n_sem, args.ventana)
+    else:
+        n_sem = ', '.join('{} {} semilla{} ({})'.format(n, len(r), 's' if len(r) > 1 else '', pasos_totales(r))
+                          for n, r in grupos)
+        subtitulo = '{}\nmedia móvil de {} episodios; banda = mínimo-máximo'.format(n_sem, args.ventana)
+    fig.suptitle('{}\n{}'.format(args.titulo, subtitulo), fontsize=10)
     fig.tight_layout()
 
     os.makedirs(os.path.dirname(args.salida) or '.', exist_ok=True)
