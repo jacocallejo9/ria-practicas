@@ -2,7 +2,7 @@
 
 Un Robobo aprende por refuerzo (SAC y PPO de Stable-Baselines3) a seguir al vehículo guía
 de *Follow City* en RoboboSim usando sólo sus sensores (blobs de la cámara e infrarrojos) a
-través de ROS 2. La memoria está en `memoria/memoria_final.tex` (figuras en `figuras/`).
+través de ROS 2. La memoria está en `memoria/memoria.pdf` y la declaración de uso de IA en `Declaracion_IA/RIA_P1_Declaracion_IA.pdf`.
 
 ## Contenido
 
@@ -21,6 +21,7 @@ través de ROS 2. La memoria está en `memoria/memoria_final.tex` (figuras en `f
 | `p1_logs/definitivos/<run>/` | Cada entrenamiento: `modelo.zip`, `config.json` (configuración con la que se entrenó), `monitor.csv` (una fila por episodio) y, en SAC, `modelo_buffer.pkl` (sólo para continuar) |
 | `p1_eval/definitivos/*.csv` | Registro por paso de cada episodio de evaluación |
 | `figuras/` | Figuras de la memoria |
+| `videos/` | Un vídeo por configuración con la política elegida evaluándose (`C1_sac_C1_s0.mp4`, `C2_sac_C2_s1.mp4`, `C3_sac_C3_s0.mp4`) y en `videos/registros/` el registro por paso de esos episodios. Los `.mp4` no están en GitHub (pesan más de 100 MB): van en el zip de entrega |
 | `comandos.txt` | Chuleta de comandos |
 
 Nombres de los entrenamientos: `<algoritmo>_<configuración>_s<semilla>`; `_ext` = entrenamiento
