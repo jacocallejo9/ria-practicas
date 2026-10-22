@@ -1,4 +1,0 @@
-configuracion,politica,episodio,paso,t_s,seg_x,seg_z,pelota_x,pelota_z,guia_x,guia_z,separacion_m,desviacion_deg,error_lateral_m,en_banda,desviacion_ok,en_carril,visible,x_blob,v_ms,w_rads,causa
-C1,aleatoria,2,1,0.39988,1.59136,-0.95998,1.57415,-0.64903,1.5782,-0.52787,0.31143,-5.02295,-0.00602,1,1,1,1,-0.24,0.3017,-0.30537,
-C1,aleatoria,2,2,0.99996,1.6004,-0.81502,1.57808,-0.61716,1.57825,-0.49906,0.19912,-12.6501,-0.01742,0,1,1,1,-0.7,0.30689,-0.25487,
-C1,aleatoria,2,3,1.39991,1.6265,-0.6849,1.5781,-0.59875,1.57828,-0.47787,0.09881,-43.23454,-0.04564,0,0,1,0,-0.7,0.11515,-0.13164,colision

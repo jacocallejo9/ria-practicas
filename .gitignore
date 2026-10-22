@@ -5,3 +5,6 @@ __pycache__/
 **/p1_logs/**/tb_*/
 # Vídeos de evaluación (pesan más de los 100 MB que admite GitHub; van en el zip de entrega)
 **/videos/*.mp4
+
+# Zips de entrega (pesan demasiado para GitHub)
+*.zip
