@@ -1,0 +1,53 @@
+FUNCIÓN DE CALIDAD - PRÁCTICA 2 (NEAT)
+======================================
+
+Usamos datos del simulador (la red no los ve): la separación real d con la
+pelota, la desviación real θ hacia la pelota y el error lateral e respecto
+al centro del carril.
+
+
+1. CALIDAD DE CADA PASO (q, entre 0 y 1)
+
+Cada paso puntúa tres cosas, cada una entre 0 y 1:
+
+  - Separación C_sep(d): vale 1 dentro de la banda (0,20-0,45 m). Fuera de
+    ella baja en línea recta hasta 0 en los límites de fallo (0,12 m, choque;
+    0,90 m, guía perdido).
+  - Orientación C_ori(θ): vale 1 si |θ| <= 15°. Baja hasta 0 en 23,3°, que es
+    el borde de la imagen, donde se pierde la pelota.
+  - Carril C_car(e): vale 1 si el robot cabe entero en el carril
+    (|e| <= 0,045 m). Baja hasta 0 cuando el centro del robot pisa la raya
+    (|e| = 0,125 m).
+
+  q = C_sep · C_ori · C_car      (formulación A: tienen que cumplirse las tres)
+  q = 0,5·C_sep + 0,3·C_ori + 0,2·C_car      (formulación B, para comparar)
+
+
+2. CALIDAD TOTAL (acumulación mixta)
+
+  F = 90 · (suma de q de cada paso) / N  +  10 · [completado]
+
+  - N = 80 pasos (el máximo del episodio).
+  - Parte por paso: se suma q en cada paso vivido. Si el robot falla antes,
+    los pasos que no ha vivido cuentan 0; esa es la penalización por fallar.
+  - Parte final: +10 si llega a los 80 pasos sin fallar.
+  - F va de 0 a 100.
+
+
+3. DURACIÓN
+
+  Como máximo 80 pasos, unos 45 s (cada paso dura ~0,55 s). Así hay al menos
+  una curva en todas las configuraciones; en C1, la más lenta, el guía no
+  empieza a girar hasta los ~40 s.
+
+
+4. CUÁNDO SE CORTA EL EPISODIO
+
+  - Choque: separación < 0,12 m.
+  - Guía perdido: separación > 0,90 m.
+  - Sin pelota: más de 3 s seguidos sin verla.
+  - Fuera de la calzada: el robot se sale de la carretera.
+  - Si se llega a 80 pasos, termina como completado (no es fallo).
+
+  Si el simulador se congela o se cae el puente, no se pone 0 al individuo:
+  se repite su evaluación.
