@@ -16,13 +16,12 @@ PUESTA EN MARCHA (igual que en la P1)
 
   python3 p2_calidad.py                          # tabla de la calidad
   python3 p2_neat.py --medir                     # tiempos y presupuesto
-  python3 p2_neat.py --manual --etiqueta C1      # referencia (controlador a mano)
   python3 p2_neat.py --evolucionar --etiqueta C1 --semilla 1 --generaciones 25
   python3 p2_neat.py --reanudar    --etiqueta C1 --semilla 1 --generaciones 25
   python3 p2_neat.py --reevaluar   --etiqueta C1 --semilla 1     # elige el genoma final
   python3 p2_neat.py --ejecutar    --etiqueta C1 --semilla 1     # vídeo
   python3 p2_figuras.py --run p2_runs/C1_A_s1 --run p2_runs/C1_A_s2 \\
-          --referencia p2_runs/referencia_C1_A.json --titulo "C1" --salida figuras/p2_C1
+          --titulo "C1" --salida figuras/p2_C1
 
 --------------------------------------------------------------------
 DECISIONES DE DISEÑO (para la memoria)
@@ -59,7 +58,12 @@ import time
 import numpy as np
 import neat
 
-from p1_comun import cargar_config
+_AQUI = os.path.dirname(os.path.abspath(__file__))
+if os.path.exists(os.path.join(_AQUI, 'p1_comun.py')):      # P1 copiada junto a la P2
+    from p1_comun import cargar_config
+    P1_DIR = _AQUI
+else:                                                       # P1 en otra carpeta (p2_rutas.py)
+    from p2_rutas import P1_DIR, cargar_cfg_p1 as cargar_config
 from p2_calidad import Calidad
 from p2_registro import RegistroGeneracion, CONTADOR, ESTADO
 
@@ -91,9 +95,13 @@ def asegurar_linea(cfg):
                   'y C_car valdrá 1.')
 
 
+OPCIONES = {'detalle': False}
+
+
 def crear_env(cfg, n_pasos):
     from p1_seguidor_env import RoboboSeguidorEnv
-    return RoboboSeguidorEnv(config=cfg, modo='entrenamiento', pasos_max=n_pasos)
+    return RoboboSeguidorEnv(config=cfg, modo='entrenamiento', pasos_max=n_pasos,
+                             verbose=OPCIONES['detalle'])
 
 
 def directorio_run(args):
@@ -119,26 +127,6 @@ def politica_de_genoma(genoma, config, idx=None):
                                         dtype=np.float32), -1.0, 1.0)
 
 
-def controlador_manual(cfg):
-    """Controlador proporcional programado a mano (línea base de referencia).
-
-    Gira hacia la pelota (w ∝ -x) y regula la velocidad con la estimada del
-    guía más una corrección por el error de separación. Usa la observación
-    completa del entorno (no es una red de NEAT).
-    """
-    v_max = cfg['accion']['v_max']
-    perdido = cfg['protocolo']['perdido_m']
-    d_obj = 0.5 * sum(cfg['protocolo']['banda_m'])
-
-    def f(obs):
-        visible, x, d_n, v_guia_n = obs[0], obs[1], obs[3], obs[6]
-        if visible < 0.5:
-            return np.array([-1.0, -0.5 * np.sign(x or 1.0)], dtype=np.float32)
-        v = np.clip(v_guia_n * v_max + 1.0 * (d_n * perdido - d_obj), 0.0, v_max)
-        return np.array([2.0 * v / v_max - 1.0, np.clip(-0.8 * x, -1.0, 1.0)], dtype=np.float32)
-    return f
-
-
 # =====================================================================
 # Evaluación de individuos
 # =====================================================================
@@ -147,10 +135,13 @@ class Evaluador:
     """Ejecuta episodios del entorno y calcula la calidad (p2_calidad.py)."""
 
     CAMPOS_LOG = ['generacion', 'genoma', 'episodio', 'calidad', 'pasos', 'causa',
-                  'completado', 'c_sep', 'c_ori', 'c_car', 'segundos']
+                  'completado', 'c_sep', 'c_ori', 'c_car', 'segundos', 'reinicio']
 
-    def __init__(self, env, calidad, episodios=1, agregar='media', ruta_log=None, idx=None):
+    def __init__(self, env, calidad, episodios=1, agregar='media', ruta_log=None, idx=None,
+                 reinicio='escena', prob_escena=0.3, semilla=0):
         self.env, self.calidad = env, calidad
+        self.reinicio, self.prob_escena = reinicio, prob_escena
+        self.rng = random.Random(semilla)        # propio: no toca el generador de NEAT
         self.N = calidad.N
         self.k, self.agregar = episodios, agregar
         self.ruta_log = ruta_log
@@ -160,12 +151,20 @@ class Evaluador:
             with open(ruta_log, 'w', newline='') as f:
                 csv.writer(f).writerow(self.CAMPOS_LOG)
 
+    def tipo_reinicio(self):
+        """'escena' (como el protocolo) o 'colocar' (el seguidor aparece detrás del
+        guía en un punto cualquiera del recorrido: rectas y curvas)."""
+        if self.reinicio == 'mixto':
+            return 'escena' if self.rng.random() < self.prob_escena else 'colocar'
+        return self.reinicio
+
     def episodio(self, politica):
         """Un episodio completo -> dict. Repite si el simulador se congela."""
         for _ in range(4):
             t0 = time.time()
             try:
-                obs, info = self.env.reset(options={'reinicio': 'escena'})
+                tipo = self.tipo_reinicio()
+                obs, info = self.env.reset(options={'reinicio': tipo})
                 suma, vivos, causa = 0.0, 0, ''
                 comp = np.zeros(3)
                 for _ in range(self.N):
@@ -192,7 +191,7 @@ class Evaluador:
             return {'calidad': self.calidad.total(suma, completado), 'pasos': vivos,
                     'causa': causa or 'tiempo', 'completado': completado,
                     'c_sep': comp[0] / vivos, 'c_ori': comp[1] / vivos, 'c_car': comp[2] / vivos,
-                    'segundos': time.time() - t0}
+                    'segundos': time.time() - t0, 'reinicio': tipo}
         raise ErrorInfraestructura('El simulador sigue congelado tras 4 intentos.')
 
     def evaluar(self, politica, id_genoma=-1, k=None, registrar=True):
@@ -206,7 +205,7 @@ class Evaluador:
                     csv.writer(f).writerow([ESTADO['generacion'], id_genoma, ep, round(r['calidad'], 3),
                                             r['pasos'], r['causa'], int(r['completado']),
                                             round(r['c_sep'], 3), round(r['c_ori'], 3),
-                                            round(r['c_car'], 3), round(r['segundos'], 1)])
+                                            round(r['c_car'], 3), round(r['segundos'], 1), r['reinicio']])
         cal = [r['calidad'] for r in res]
         valor = float(np.min(cal) if self.agregar == 'min' else np.mean(cal))
         if not math.isfinite(valor):
@@ -221,10 +220,10 @@ def crear_eval_genomes(ev, config_neat):
             g.fitness = valor
             CONTADOR['evaluaciones'] += 1
             r = res[-1]
-            print('  gen {:3d}  ind {:2d}/{:2d} (id {:4d})  F = {:6.2f}  {:3d} pasos  {:13s}  '
+            print('  gen {:3d}  ind {:2d}/{:2d} (id {:4d})  F = {:6.2f}  {:3d} pasos  {:13s} {:8s} '
                   'sep {:.2f} ori {:.2f} car {:.2f}'.format(
                       ESTADO['generacion'], n, len(genomas), gid, valor, r['pasos'], r['causa'],
-                      r['c_sep'], r['c_ori'], r['c_car']))
+                      '(' + r['reinicio'] + ')', r['c_sep'], r['c_ori'], r['c_car']))
     return eval_genomes
 
 
@@ -256,7 +255,7 @@ def modo_evolucionar(args, reanudar=False):
     shutil.copy(args.config_p1, os.path.join(run, 'p1_config.json'))
     meta = {'etiqueta': args.etiqueta, 'formulacion': args.formulacion, 'semilla': args.semilla,
             'n_pasos': args.pasos, 'episodios_por_individuo': args.episodios_ind,
-            'agregar': args.agregar, 'obs_idx': OBS_IDX, 'entradas': NOMBRES_ENTRADA,
+            'agregar': args.agregar, 'reinicio': args.reinicio, 'obs_idx': OBS_IDX, 'entradas': NOMBRES_ENTRADA,
             'salidas': NOMBRES_SALIDA, 'guia': GUIA.get(args.etiqueta, '')}
     with open(os.path.join(run, 'meta.json'), 'w') as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
@@ -288,7 +287,9 @@ def modo_evolucionar(args, reanudar=False):
 
     env = crear_env(cfg, args.pasos)
     ev = Evaluador(env, Calidad(cfg, args.formulacion, args.pasos), args.episodios_ind,
-                   args.agregar, os.path.join(run, 'evaluaciones.csv'))
+                   args.agregar, os.path.join(run, 'evaluaciones.csv'),
+                   reinicio=args.reinicio, prob_escena=cfg['reinicio']['prob_escena'],
+                   semilla=args.semilla)
     poblacion.add_reporter(neat.StdOutReporter(True))
     estadisticas = neat.StatisticsReporter()
     poblacion.add_reporter(estadisticas)
@@ -330,7 +331,7 @@ def modo_medir(args):
             env.reset(options={'reinicio': 'escena'})
             t_reset.append(time.time() - t0)
         print('Tiempo de reset (T_r): {} s'.format(', '.join('{:.1f}'.format(t) for t in t_reset)))
-        g = next(iter(neat.Population(config).population.values()))   # genoma aleatorio de la población inicial
+        g = next(iter(neat.Population(config).population.values()))   # genoma aleatorio inicial
         ev = Evaluador(env, Calidad(cfg, args.formulacion, args.pasos), 1, 'media', None)
         valor, res = ev.evaluar(politica_de_genoma(g, config), registrar=False)
         r = res[0]
@@ -348,34 +349,6 @@ def modo_medir(args):
             G, gen * G / 3600))
         if gen * G > 6 * 3600:
             print('  AVISO: supera las 6 h recomendadas; baja pop_size, generaciones o pasos.')
-    finally:
-        env.close()
-
-
-# =====================================================================
-# --manual : referencia con el controlador a mano
-# =====================================================================
-
-def modo_manual(args):
-    cfg = cargar_config(args.config_p1)
-    asegurar_linea(cfg)
-    env = crear_env(cfg, args.pasos)
-    try:
-        if not args.sin_pausa:
-            input('Configura el guía como {} ({}), Apply y pulsa Enter... '.format(
-                args.etiqueta, GUIA.get(args.etiqueta, '?')))
-        ev = Evaluador(env, Calidad(cfg, args.formulacion, args.pasos), 1, 'media', None)
-        valor, res = ev.evaluar(controlador_manual(cfg), k=args.episodios, registrar=False)
-        for i, r in enumerate(res, 1):
-            print('episodio {}: F = {:.2f}  {}  {} pasos  sep {:.2f} ori {:.2f} car {:.2f}'.format(
-                i, r['calidad'], r['causa'], r['pasos'], r['c_sep'], r['c_ori'], r['c_car']))
-        os.makedirs('p2_runs', exist_ok=True)
-        ruta = os.path.join('p2_runs', 'referencia_{}_{}.json'.format(args.etiqueta, args.formulacion))
-        with open(ruta, 'w') as f:
-            json.dump({'etiqueta': args.etiqueta, 'formulacion': args.formulacion,
-                       'calidad_media': valor, 'calidades': [r['calidad'] for r in res],
-                       'completados': sum(r['completado'] for r in res)}, f, indent=2)
-        print('\nCalidad media del controlador a mano: {:.2f} -> {}'.format(valor, ruta))
     finally:
         env.close()
 
@@ -478,7 +451,7 @@ def modo_ejecutar(args):
 def main():
     p = argparse.ArgumentParser(description='Práctica 2 de RIA: NEAT sobre el entorno de la P1.')
     m = p.add_mutually_exclusive_group(required=True)
-    for n in ['medir', 'manual', 'evolucionar', 'reanudar', 'reevaluar', 'ejecutar']:
+    for n in ['medir', 'evolucionar', 'reanudar', 'reevaluar', 'ejecutar']:
         m.add_argument('--' + n, action='store_true')
     p.add_argument('--etiqueta', default='C1', help='configuración del guía: C1, C2, C3')
     p.add_argument('--formulacion', choices=['A', 'B'], default='A',
@@ -488,18 +461,22 @@ def main():
     p.add_argument('--pasos', type=int, default=80, help='pasos máximos por episodio (N)')
     p.add_argument('--episodios-ind', type=int, default=1, help='episodios por individuo')
     p.add_argument('--agregar', choices=['media', 'min'], default='media')
-    p.add_argument('--episodios', type=int, default=3, help='--manual / --reevaluar: episodios')
+    p.add_argument('--reinicio', choices=['escena', 'mixto'], default='mixto',
+                   help='cómo empieza cada episodio de la evolución: escena (siempre desde el '
+                        'inicio) o mixto (escena con prob. reinicio.prob_escena de p1_config.json '
+                        'y, si no, el seguidor aparece en un punto cualquiera del recorrido)')
+    p.add_argument('--episodios', type=int, default=3, help='--reevaluar: episodios por candidato')
     p.add_argument('--candidatos', type=int, default=5, help='--reevaluar: nº de genomas')
     p.add_argument('--config-ini', default='config-p2.ini')
-    p.add_argument('--config-p1', default='p1_config.json')
+    p.add_argument('--config-p1', default=os.path.join(P1_DIR, 'p1_config.json'))
     p.add_argument('--salida', default=None, help='carpeta de la evolución')
     p.add_argument('--sin-pausa', action='store_true')
+    p.add_argument('--detalle', action='store_true', help='una línea por paso (diagnóstico)')
     args = p.parse_args()
+    OPCIONES['detalle'] = args.detalle
 
     if args.medir:
         modo_medir(args)
-    elif args.manual:
-        modo_manual(args)
     elif args.evolucionar:
         modo_evolucionar(args)
     elif args.reanudar:

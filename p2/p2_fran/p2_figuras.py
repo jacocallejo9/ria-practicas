@@ -30,6 +30,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.ticker import MaxNLocator  # noqa: E402
 
 
 def leer_run(d):
@@ -39,6 +40,11 @@ def leer_run(d):
         raise SystemExit('Sin generaciones en ' + d)
     r = {k: np.array([float(x[k]) for x in filas]) for k in filas[0]}
     r['nombre'] = os.path.basename(os.path.normpath(d))
+    ruta_meta = os.path.join(d, 'meta.json')          # lo escribe p2_neat.py al evolucionar
+    r['meta'] = {}
+    if os.path.exists(ruta_meta):
+        with open(ruta_meta) as f:
+            r['meta'] = json.load(f)
     esp = os.path.join(d, 'especies.csv')
     r['tam'] = None
     if os.path.exists(esp):
@@ -70,10 +76,12 @@ def pie(runs, args):
     r0 = runs[0]
     pasos = ', '.join('{:.0f}'.format(r['pasos'][-1]) for r in runs)
     horas = ', '.join('{:.1f}'.format(r['segundos'][-1] / 3600) for r in runs)
-    return ('{} semilla(s); población {}; {} generaciones; {} ep./individuo; episodio máx. {} pasos. '
-            'Pasos del entorno: {}. Horas: {}.').format(
-                len(runs), r0['pop'], len(r0['cal_mejor']), args.episodios_ind, args.pasos_max,
-                pasos, horas)
+    m = r0['meta']
+    return ('{} semilla(s); formulación {}; población {}; {} generaciones; {} ep./individuo; episodio máx. '
+            '{} pasos; inicio de episodio: {}. Pasos del entorno: {}. Horas: {}.').format(
+                len(runs), m.get('formulacion', '?'), r0['pop'], len(r0['cal_mejor']),
+                m.get('episodios_por_individuo', args.episodios_ind),
+                m.get('n_pasos', args.pasos_max), m.get('reinicio', '?'), pasos, horas)
 
 
 def guardar(fig, ruta, texto):
@@ -107,10 +115,11 @@ def fig_calidad(runs, ref, args):
         ax.axhline(ref, color='k', ls='--', lw=1.2, label='controlador a mano ({:.1f})'.format(ref))
     ax.set_ylim(0, 100)
     ax.set_xlabel('Generación')
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_ylabel('Calidad F (adimensional, rango teórico 0-100)')
     ax.set_title('Evolución de la calidad · ' + args.titulo, fontsize=10)
     ax.grid(alpha=0.3)
-    ax.legend(fontsize=8, loc='lower right')
+    ax.legend(fontsize=8, loc='best')
     fig.tight_layout()
     guardar(fig, args.salida + '_calidad', pie(runs, args))
 
@@ -129,6 +138,7 @@ def fig_especies(runs, args):
             r['nombre'], n_esp.min(), n_esp.max(), n_esp[-1]), fontsize=9, loc='left')
         ax.grid(alpha=0.3)
     ejes[-1, 0].set_xlabel('Generación')
+    ejes[-1, 0].xaxis.set_major_locator(MaxNLocator(integer=True))
     fig.tight_layout()
     guardar(fig, args.salida + '_especies', pie(runs, args))
 
@@ -151,6 +161,7 @@ def fig_complejidad(runs, args):
         b.fill_between(g, M.min(0), M.max(0), color='tab:green', alpha=0.2, lw=0, label='mínimo-máximo')
     b.set_ylim(-2, 102)
     b.set_xlabel('Generación')
+    b.xaxis.set_major_locator(MaxNLocator(integer=True))
     b.set_ylabel('Episodios completados (%)')
     b.grid(alpha=0.3)
     b.legend(fontsize=8, loc='upper left')
