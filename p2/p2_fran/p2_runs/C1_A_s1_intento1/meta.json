@@ -1,0 +1,30 @@
+{
+  "etiqueta": "C1",
+  "formulacion": "A",
+  "semilla": 1,
+  "n_pasos": 100,
+  "episodios_por_individuo": 1,
+  "agregar": "media",
+  "reinicio": "mixto",
+  "obs_idx": [
+    0,
+    1,
+    3,
+    5,
+    6,
+    8
+  ],
+  "entradas": [
+    "visible",
+    "x",
+    "distancia",
+    "vel_dist",
+    "vel_guia",
+    "ir_frontal"
+  ],
+  "salidas": [
+    "v",
+    "w"
+  ],
+  "guia": "Mode 1, 10-10 (crucero constante)"
+}

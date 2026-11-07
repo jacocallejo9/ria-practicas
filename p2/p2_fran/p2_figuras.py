@@ -156,7 +156,7 @@ def fig_complejidad(runs, args):
     a.grid(alpha=0.3)
     a.legend(fontsize=8)
     M = np.array([r['pct_completados'][:n] for r in runs])
-    b.plot(g, M.mean(0), color='tab:green', lw=2, label='episodios completados (media de semillas)')
+    b.plot(g, M.mean(0), color='tab:green', lw=2, label='episodios completados' + (' (media de semillas)' if len(runs) > 1 else ''))
     if len(runs) > 1:
         b.fill_between(g, M.min(0), M.max(0), color='tab:green', alpha=0.2, lw=0, label='mínimo-máximo')
     b.set_ylim(-2, 102)
