@@ -1,0 +1,26 @@
+{
+  "etiqueta": "C1",
+  "formulacion": "A",
+  "semilla": 1,
+  "n_pasos": 100,
+  "episodios_por_individuo": 1,
+  "agregar": "media",
+  "reinicio": "escena",
+  "entradas_version": 2,
+  "entradas": [
+    "err_dist",
+    "x",
+    "vel_dist",
+    "vel_guia",
+    "sin_pelota",
+    "ir_frontal"
+  ],
+  "salidas": [
+    "v",
+    "w"
+  ],
+  "guia": "Mode 1, 10-10 (crucero constante)",
+  "desde": null,
+  "multiplicador_simulador": "1.0",
+  "rescate": "Copia de C1_v2_s1 hasta la generación 16; desde la 17 la x del blob llegó invertida y hundió a toda la población. Se reanuda desde chk/p2-17."
+}

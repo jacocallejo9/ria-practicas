@@ -25,20 +25,24 @@ Cada paso puntúa tres cosas, cada una entre 0 y 1:
 
 2. CALIDAD TOTAL (acumulación mixta)
 
-  F = 90 · (suma de q de cada paso) / N  +  10 · [completado]
+  F = 20 · n / N  +  70 · (suma de q de cada paso) / N  +  10 · [completado]
 
-  - N = 80 pasos (el máximo del episodio).
+  - N = 100 pasos (el máximo del episodio).
+  - Supervivencia: n = pasos vividos sin fallar. Da gradiente desde la
+    primera generación aunque q sea 0 (falla a los 2 s ≈ 3; a los 8 s ≈ 12).
   - Parte por paso: se suma q en cada paso vivido. Si el robot falla antes,
     los pasos que no ha vivido cuentan 0; esa es la penalización por fallar.
-  - Parte final: +10 si llega a los 80 pasos sin fallar.
+  - Parte final: +10 si llega a los 100 pasos sin fallar.
   - F va de 0 a 100.
 
 
-3. DURACIÓN
+3. DURACIÓN Y COMIENZO
 
-  Como máximo 80 pasos, unos 45 s (cada paso dura ~0,55 s). Así hay al menos
+  Como máximo 100 pasos, unos 60 s (cada paso dura ~0,6 s). Así hay al menos
   una curva en todas las configuraciones; en C1, la más lenta, el guía no
   empieza a girar hasta los ~40 s.
+  Cada episodio empieza reiniciando la escena (como el protocolo): todos los
+  individuos se evalúan en las mismas condiciones.
 
 
 4. CUÁNDO SE CORTA EL EPISODIO
@@ -47,7 +51,7 @@ Cada paso puntúa tres cosas, cada una entre 0 y 1:
   - Guía perdido: separación > 0,90 m.
   - Sin pelota: más de 3 s seguidos sin verla.
   - Fuera de la calzada: el robot se sale de la carretera.
-  - Si se llega a 80 pasos, termina como completado (no es fallo).
+  - Si se llega a 100 pasos, termina como completado (no es fallo).
 
   Si el simulador se congela o se cae el puente, no se pone 0 al individuo:
   se repite su evaluación.

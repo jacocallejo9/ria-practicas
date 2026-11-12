@@ -2,13 +2,18 @@
 """
 Práctica 2 — Función de calidad (fitness) del seguidor.
 
-Implementa funcion_calidad.txt / P2_funcion_calidad.md:
+Implementa P2_funcion_calidad.md:
 
-    F = 90 · (1/N) · Σ q_t  +  10 · [completado]          F en [0, 100]
+    F = 20 · n/N  +  70 · (1/N) · Σ q_t  +  10 · [completado]      F en [0, 100]
 
-  N = 80 pasos (máximo del episodio). Los pasos no vividos cuentan 0: esa
-  es la única penalización por fallar. El paso en el que se falla no suma
-  (igual que en la recompensa de la P1).
+  N  pasos máximos del episodio (100 por defecto, ~60 s).
+  n  pasos vividos sin fallar. Término de SUPERVIVENCIA: da gradiente desde
+     la primera generación (el que pierde al guía a los 8 s puntúa más que
+     el que lo pierde a los 2 s aunque los dos lo hagan mal) y no depende
+     de lo bien que se hace cada paso.
+  q_t calidad de cada paso, en [0, 1]. Los pasos no vividos cuentan 0: es
+     la penalización implícita por fallar. El paso en que se falla no suma.
+  [completado] llega a N pasos sin fallar.
 
 Calidad de cada paso, con datos PRIVILEGIADOS del simulador (la red no los
 recibe; vienen en el `info` de step()):
@@ -21,7 +26,7 @@ recibe; vienen en el `info` de step()):
              0,045 m (el robot de 0,16 m cabe en el carril de 0,25 m); recta
              hasta 0 en 0,125 m (el centro del robot pisa la raya).
 
-  A (producto)  q = C_sep · C_ori · C_car
+  A (producto)  q = C_sep · C_ori · C_car       (las tres a la vez)
   B (suma)      q = 0,5·C_sep + 0,3·C_ori + 0,2·C_car
 
 Los umbrales salen de p1_config.json (protocolo, camara, carril), así que no
@@ -33,6 +38,7 @@ hay números mágicos aquí. Sin línea central (e = nan) C_car vale 1.
 import math
 
 PESOS_B = (0.5, 0.3, 0.2)       # separación, orientación, carril
+PESOS_F = (20.0, 70.0, 10.0)    # supervivencia, calidad por paso, completado (suman 100)
 
 
 def rampa(v, cero, uno):
@@ -42,13 +48,13 @@ def rampa(v, cero, uno):
 
 class Calidad:
 
-    def __init__(self, cfg, formulacion='A', n_pasos=80, bonificacion=10.0):
+    def __init__(self, cfg, formulacion='A', n_pasos=100, pesos=PESOS_F):
         if formulacion not in ('A', 'B'):
             raise ValueError('formulación desconocida: ' + str(formulacion))
         p = cfg['protocolo']
         self.formulacion = formulacion
         self.N = int(n_pasos)
-        self.bonif = float(bonificacion)
+        self.p_vida, self.p_paso, self.p_fin = (float(x) for x in pesos)
         self.d_col = p['colision_m']
         self.d_min, self.d_max = p['banda_m']
         self.d_perd = p['perdido_m']
@@ -83,9 +89,12 @@ class Calidad:
              self.c_car(info.get('error_lateral', float('nan'))))
         return self.combinar(*t), t
 
-    def total(self, suma_q, completado):
-        """Calidad del episodio: parte por paso + bonificación final."""
-        return (100.0 - self.bonif) * suma_q / self.N + self.bonif * (1.0 if completado else 0.0)
+    def total(self, suma_q, vivos, completado):
+        """Calidad del episodio a partir de la suma de q, los pasos vividos sin
+        fallar y si se ha completado."""
+        return (self.p_vida * min(vivos, self.N) / self.N
+                + self.p_paso * suma_q / self.N
+                + self.p_fin * (1.0 if completado else 0.0))
 
 
 # ======================================================================
@@ -101,7 +110,9 @@ if __name__ == '__main__':
         for d, t, e in zip(ds, ts, es):
             print('{:5.3f}   {:4.2f}       {:5.1f}    {:4.2f}       {:5.3f}    {:4.2f}'.format(
                 d, Q.c_sep(d), t, Q.c_ori(t), e, Q.c_car(e)))
-        print('Ejemplos (N = {}): perfecto = {:.1f};  falla a los 2 s (4 pasos, q=1) = {:.1f};  '
-              'a los 8 s (15 pasos) = {:.1f};  casi perfecto y falla al final = {:.1f}\n'.format(
-                  Q.N, Q.total(Q.N, True), Q.total(4, False), Q.total(15, False),
-                  Q.total(Q.N - 1, False)))
+        N = Q.N
+        print('Ejemplos (N = {}, q = 1 en los pasos vividos): perfecto = {:.1f};  falla a los 2 s '
+              '(4 pasos) = {:.1f};  a los 8 s (14 pasos) = {:.1f};  sobrevive sin hacerlo bien '
+              '(q = 0) = {:.1f};  casi perfecto y falla al final = {:.1f}\n'.format(
+                  N, Q.total(N, N, True), Q.total(3, 4, False), Q.total(13, 14, False),
+                  Q.total(0, N, True), Q.total(N - 2, N - 1, False)))

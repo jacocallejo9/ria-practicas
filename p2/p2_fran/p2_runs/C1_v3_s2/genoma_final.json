@@ -1,0 +1,15 @@
+{
+  "origen": "p2_runs/C1_v3_s2/genomas/mejor_gen021.pkl",
+  "id": 281,
+  "calidad_media": 93.54749890477711,
+  "completados": 3,
+  "calidades": [
+    95.3926336287921,
+    92.21705045666785,
+    93.0328126288714
+  ],
+  "nodos_conexiones": [
+    3,
+    10
+  ]
+}
