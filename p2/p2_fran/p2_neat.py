@@ -77,6 +77,8 @@ import re
 import shutil
 import time
 
+from itertools import count
+
 import numpy as np
 import neat
 
@@ -522,17 +524,59 @@ def preparar_config(ruta_ini, destino, semilla):
         f.write(txt)
 
 
+def reparar_indexador_nodos(poblacion):
+    """Pone el contador de nodos nuevos por encima de todos los existentes.
+
+    NEAT-Python 2.0, al restaurar un punto de control con una config nueva
+    (--desde), deja node_indexer a None y lo inicializa con el máximo del
+    PRIMER genoma que muta: si otro genoma ya tiene ese número de nodo,
+    falla 'assert new_id not in node_dict' al reproducir. Así se cortaron
+    C2_inc_s2 (contador en 7, nodos hasta 39) y C2_inc_s3; sus puntos de
+    control guardan el contador malo, así que se repara también al reanudar.
+    """
+    gc = poblacion.config.genome_config
+    nodos = [k for g in poblacion.population.values() for k in g.nodes]
+    for s in poblacion.species.species.values():
+        if s.representative is not None:
+            nodos.extend(s.representative.nodes)
+    siguiente = max(nodos + [gc.num_outputs - 1]) + 1
+    if gc.node_indexer is not None:
+        actual = next(gc.node_indexer)        # consume uno: no importa, sólo saltamos ids
+        siguiente = max(siguiente, actual)
+    gc.node_indexer = count(siguiente)
+
+
 def poblacion_desde(origen, ini):
     """Evolución incremental: la población del último punto de control de
     otra evolución (p. ej. la final de C1) continúa con otra configuración
-    del guía, con el .ini de la nueva carpeta."""
-    meta = leer_meta(origen)
+    del guía, con el .ini de la nueva carpeta.
+
+    origen puede ser la carpeta (se usa su último punto de control) o un
+    punto de control concreto (.../chk/p2-k): la población final de una
+    evolución puede ser peor que la de generaciones anteriores (en
+    C1_v3_s2 el mejor de la última generación sacó 18,6 y el genoma final,
+    de la 21, 93,5). La nueva fase cuenta sus generaciones desde 0."""
+    if os.path.isfile(origen):
+        chk = origen
+        run_origen = os.path.dirname(os.path.dirname(os.path.abspath(chk)))
+    else:
+        run_origen = origen
+        chk = ultimo_checkpoint(origen)
+    meta = leer_meta(run_origen)
     if version_de_meta(meta) != VERSION_ENTRADAS:
         raise SystemExit('{} usa otras entradas (versión {}): no se puede continuar.'.format(
-            origen, version_de_meta(meta)))
-    chk = ultimo_checkpoint(origen)
+            run_origen, version_de_meta(meta)))
     print('Evolución incremental desde {}'.format(chk))
-    return neat.Checkpointer.restore_checkpoint(chk, new_config=cargar_neat(ini)), chk
+    poblacion = neat.Checkpointer.restore_checkpoint(chk, new_config=cargar_neat(ini))
+    # Generaciones desde 0 en la nueva carpeta (puntos de control, CSV y
+    # --reanudar cuadran) y estancamiento contado desde el inicio de la fase.
+    poblacion.generation = 0
+    for s in poblacion.species.species.values():
+        s.created = 0
+        s.last_improved = 0
+        s.fitness_history = []
+    reparar_indexador_nodos(poblacion)
+    return poblacion, chk
 
 
 def modo_evolucionar(args, reanudar=False):
@@ -578,6 +622,7 @@ def modo_evolucionar(args, reanudar=False):
     if reanudar:
         chk = ultimo_checkpoint(run)
         poblacion = neat.Checkpointer.restore_checkpoint(chk)
+        reparar_indexador_nodos(poblacion)
         if os.path.exists(ruta_csv):
             with open(ruta_csv) as f:
                 ya = max(sum(1 for _ in f) - 1, 0)
