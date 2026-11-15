@@ -1,0 +1,25 @@
+{
+  "etiqueta": "C3",
+  "formulacion": "A",
+  "semilla": 2,
+  "n_pasos": 150,
+  "episodios_por_individuo": 1,
+  "agregar": "media",
+  "reinicio": "escena",
+  "entradas_version": 2,
+  "entradas": [
+    "err_dist",
+    "x",
+    "vel_dist",
+    "vel_guia",
+    "sin_pelota",
+    "ir_frontal"
+  ],
+  "salidas": [
+    "v",
+    "w"
+  ],
+  "guia": "Mode 2, 10-40 (variable)",
+  "desde": "p2_runs/C1_v6_s3/chk/p2-12",
+  "multiplicador_simulador": "1.0"
+}
