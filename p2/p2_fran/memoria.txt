@@ -44,7 +44,7 @@ Tabla 2. Evoluciones de la solución (población 20).
 Evolución	Generaciones	Pasos	Horas	Resultado
 C1_v5_s1	20	7.340	2,1	Genoma 152, válido en C1 y C3
 C1_v5_s2	20	13.218	2,6	Genoma 160, válido en C1
-C1_v6_s3	15	19.265	3,3	Genoma 265, válido en C1
+C1_v6_s3	15	19.265	3,3	Genoma 158, válido en C1
 C3_v6 (3 semillas, desde C1)	3 × 10	14.087	3,3	Ninguno válido
 C4_v6 (3 semillas, desde C3)	[PENDIENTE]	[PENDIENTE]	[PENDIENTE]	[PENDIENTE]
 
@@ -78,7 +78,7 @@ Política	Conf.	Compl.	En banda	Sep. media	Desv. media
 A mano	C2	1/1	41,9 %	0,456 m	3,2°
 NEAT 152 (s1)	C1	2/2	99,8 %	0,332 m	6,4°
 NEAT 160 (s2)	C1	2/2	100 %	0,326 m	7,9°
-NEAT 265 (s3)	C1	1/1	100 %	0,318 m	4,9°
+NEAT 158 (s3)	C1	1/1	100 %	0,318 m	4,9°
 NEAT 152 (s1)	C3	2/2	74,4 %	0,408 m	9,5°
 SAC P1 C3 s0	C3	0/1	72,1 %	0,410 m	12,8°
 [PENDIENTE: línea base y controladores en C1-C4; SAC de la P1 en la misma sesión]
