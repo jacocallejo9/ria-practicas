@@ -1,0 +1,110 @@
+Práctica 2. Seguimiento de un vehículo en la ciudad de Robobo con neuroevolución
+Robótica Inteligente Aplicada. Grado en Inteligencia Artificial.
+Jacobo Callejo Iribarren (jacobo.callejo@udc.es) - Francisco Novo Rego (francisco.novo.rego@udc.es)
+
+1. Diseño
+
+Se reutilizan el entorno, la calibración y el puente (sólo blobs) de la P1, con multiplicador 1,0 y RoboboSim 4.4.1.
+
+Observación y acción. La observación de la P1 se reduce a 6 entradas que valen aproximadamente 0 si el seguimiento es bueno, para que las redes nuevas no saturen la tanh(2,5·z) de NEAT:
+- error de distancia respecto al centro de la banda;
+- x del blob;
+- velocidad de la distancia;
+- velocidad estimada del guía;
+- tiempo sin ver la pelota;
+- infrarrojo frontal.
+
+La acción es la de la P1: v ∈ [0; 0,35] m/s y w ∈ [−0,6; 0,6] rad/s.
+
+Red. Prealimentada, con 6 entradas y 2 salidas tanh, sin ocultas al principio y con conexión completa.
+
+Calidad. Usa la separación, la desviación y el error lateral reales del simulador:
+
+F = 20·n/N + 70·Σq/N + 10·[completado],   F ∈ [0, 100],   q = C_sep·C_ori·C_car
+
+N son 150 pasos y n, los pasos vividos sin fallar. Cada C vale 1 si se cumple el requisito y baja linealmente a 0 en el límite de fallo:
+- C_sep: banda 0,20-0,45 m; 0 en 0,12 y 0,90 m.
+- C_ori: |θ| ≤ 15°; 0 en 23,3°.
+- C_car: |e| ≤ 0,045 m; 0 en 0,125 m.
+
+El término de supervivencia da gradiente desde la generación 0. El controlador a mano obtiene 96,4 en C1.
+
+Evaluación. 1 episodio por individuo (2 en C4), de 150 pasos (≈ 83 s), con reinicio de escena. El controlador final se elige reevaluando con 3 episodios a los 5-7 mejores candidatos.
+
+Tabla 1. Parámetros de NEAT que cambian respecto a las indicaciones técnicas.
+Parámetro	Indicaciones	v5	v6
+bias_init_stdev / bias_mutate_power	1,0 / 0,5	0,3 / 0,3	0,3 / 0,15
+weight_mutate_rate / power / replace	0,8 / 0,5 / 0,1	igual	0,5 / 0,2 / 0,02
+compatibility_threshold	3,0	1,3	1,3
+max_stagnation / species_elitism	8 / 1	20 / 2	20 / 2
+
+2. Evolución
+
+Tabla 2. Evoluciones de la solución (población 20).
+Evolución	Generaciones	Pasos	Horas	Resultado
+C1_v5_s1	20	7.340	2,1	Genoma 152, válido en C1 y C3
+C1_v5_s2	20	13.218	2,6	Genoma 160, válido en C1
+C1_v6_s3	15	19.265	3,3	Genoma 265, válido en C1
+C3_v6 (3 semillas, desde C1)	3 × 10	14.087	3,3	Ninguno válido
+C4_v6 (3 semillas, desde C3)	[PENDIENTE]	[PENDIENTE]	[PENDIENTE]	[PENDIENTE]
+
+[Figura 1: curvas de evolución de C1 (mejor y media, 3 semillas) con la referencia del controlador a mano.]
+
+C1. Con la v5 sólo la semilla 2 se estabilizó. Las otras dos tenían un buen mejor individuo en algunas generaciones, pero la media de la población no pasaba de 21. Hubo dos causas:
+- Ruido: el mismo genoma variaba de 24 a 93 entre evaluaciones, así que la selección premiaba la suerte.
+- Mutación excesiva: los hijos de padres de 50-75 sacaban de media 6-12.
+
+La v6, con una mutación menor, lo corrigió: media de la población de 35-56 y hasta un 55 % de episodios completados. A cambio, quedó una sola especie, frente a las 3-5 de la v5.
+
+C2, C3 y C4.
+- C2 no se resolvió, ni desde cero ni con 6 evoluciones incrementales. El giro brusco heredado de C1 produce zigzag.
+- En C3, la población de C1 fallaba a los 13 s: en C1 la velocidad del guía es constante y la red no aprende a usar esa entrada.
+- [PENDIENTE: C4, evolucionada desde C3 con 2 episodios por individuo.]
+
+3. La red obtenida
+
+[Figura 2: topología del genoma 152.]
+
+El genoma 152 tiene 1 neurona oculta y 10 conexiones, 13 parámetros en total. Es casi el controlador a mano (w = −0,8·x; v ∝ d − 0,28), con algunos añadidos:
+- gira hacia la pelota (x → w, −1,38), con una ganancia unas cuatro veces mayor que la del controlador a mano;
+- acelera con el error de distancia (+0,91) y con su derivada, a través de la neurona oculta: es un controlador PD;
+- frena con el infrarrojo (−2,11);
+- frena cuando la pelota se va a la izquierda (x → v, +0,75), es decir, en las curvas de este circuito.
+
+4. Resultados
+
+Tabla 3. Protocolo del anexo B.
+Política	Conf.	Compl.	En banda	Sep. media	Desv. media
+A mano	C2	1/1	41,9 %	0,456 m	3,2°
+NEAT 152 (s1)	C1	2/2	99,8 %	0,332 m	6,4°
+NEAT 160 (s2)	C1	2/2	100 %	0,326 m	7,9°
+NEAT 265 (s3)	C1	1/1	100 %	0,318 m	4,9°
+NEAT 152 (s1)	C3	2/2	74,4 %	0,408 m	9,5°
+SAC P1 C3 s0	C3	0/1	72,1 %	0,410 m	12,8°
+[PENDIENTE: línea base y controladores en C1-C4; SAC de la P1 en la misma sesión]
+
+C1 queda resuelta con 3 semillas. C3 la resuelve el genoma 152, entrenado sólo en C1.
+
+Comparación con la P1:
+- Rendimiento: en C1 SAC centra mejor la pelota (2,1° frente a 6,4°). En C3, NEAT completa y SAC no.
+- Coste: SAC necesitó 9.431 pasos y 1,7 h. La evolución del genoma 152, 7.340 pasos y 2,1 h, porque los reinicios dominan el coste. Todos los intentos de la P2 suman unas 43 h.
+- Tamaño: el actor de SAC tiene 69.892 parámetros y la red de NEAT, 13.
+- Interpretabilidad: la red de NEAT se lee conexión a conexión; la de SAC, no.
+
+5. Transferencia al entorno real
+
+[PENDIENTE]
+
+6. Conclusiones
+
+SAC aprendió las tres configuraciones de la P1 y NEAT sólo resolvió C1 con varias semillas, aunque un controlador generalizó a C3. NEAT es más sensible al ruido, porque recibe una calidad por episodio, y su coste lo dominan los reinicios. A cambio, da redes diminutas e interpretables.
+
+Además del ruido y la mutación, hubo problemas de infraestructura, cada uno con su corrección:
+- la x del blob se invertía; se añadió una comprobación en cada generación;
+- el simulador se degradaba en sesiones largas; se añadió un centinela y se pasó a RoboboSim 4.4.1;
+- NEAT-Python fallaba al restaurar puntos de control con otra configuración; se corrigió en el código.
+
+Mejoras:
+- varios episodios por individuo;
+- alternar configuraciones del guía durante la evolución;
+- limitar w_max a ≈ 0,3 rad/s.

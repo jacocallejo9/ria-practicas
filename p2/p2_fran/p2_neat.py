@@ -89,7 +89,7 @@ from p2_registro import RegistroGeneracion, CONTADOR, ESTADO
 P1_DIR = os.path.dirname(os.path.abspath(__file__))
 NOMBRES_SALIDA = ['v', 'w']
 GUIA = {'C1': 'Mode 1, 10-10 (crucero constante)', 'C2': 'Mode 1, 10-40 (crucero)',
-        'C3': 'Mode 2, 10-40 (variable)', 'C4': 'Mode 2 + paradas, 10-40'}
+        'C3': 'Mode 2, 10-40 (variable)', 'C4': 'Mode 3, 10-40 (variable con paradas)'}
 
 # Versión de las entradas. La 1 es la de las primeras evoluciones
 # (p2_runs/C1_A_s1*): seis componentes de la observación tal cual. Se

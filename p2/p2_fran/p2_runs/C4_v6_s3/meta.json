@@ -1,0 +1,25 @@
+{
+  "etiqueta": "C4",
+  "formulacion": "A",
+  "semilla": 3,
+  "n_pasos": 150,
+  "episodios_por_individuo": 2,
+  "agregar": "media",
+  "reinicio": "escena",
+  "entradas_version": 2,
+  "entradas": [
+    "err_dist",
+    "x",
+    "vel_dist",
+    "vel_guia",
+    "sin_pelota",
+    "ir_frontal"
+  ],
+  "salidas": [
+    "v",
+    "w"
+  ],
+  "guia": "Mode 3, 10-40 (variable con paradas)",
+  "desde": "p2_runs/C3_v6_s1/chk/p2-4",
+  "multiplicador_simulador": "1.0"
+}
