@@ -1,0 +1,25 @@
+{
+  "etiqueta": "C1",
+  "formulacion": "A",
+  "semilla": 1,
+  "n_pasos": 150,
+  "episodios_por_individuo": 1,
+  "agregar": "media",
+  "reinicio": "escena",
+  "entradas_version": 2,
+  "entradas": [
+    "err_dist",
+    "x",
+    "vel_dist",
+    "vel_guia",
+    "sin_pelota",
+    "ir_frontal"
+  ],
+  "salidas": [
+    "v",
+    "w"
+  ],
+  "guia": "Mode 1, 10-10 (crucero constante)",
+  "desde": null,
+  "multiplicador_simulador": "1.0"
+}
