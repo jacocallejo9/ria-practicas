@@ -1,0 +1,27 @@
+digraph red {
+  rankdir=LR; nodesep=0.12; ranksep=0.9;
+  node [fontname="Calibri", fontsize=16, style=filled, penwidth=0.8];
+  edge [fontname="Calibri", fontsize=15, arrowsize=0.8];
+  { rank=same;
+    i1 [label="error de distancia", shape=box, fillcolor="#dbe8f6", fontcolor="black"];
+    i2 [label="posición de la pelota", shape=box, fillcolor="#dbe8f6", fontcolor="black"];
+    i3 [label="cambio de distancia", shape=box, fillcolor="#dbe8f6", fontcolor="black"];
+    i4 [label="velocidad del guía", shape=box, fillcolor="#dbe8f6", fontcolor="black"];
+    i5 [label="tiempo sin pelota", shape=box, fillcolor="#dbe8f6", fontcolor="black"];
+    i6 [label="infrarrojo frontal", shape=box, fillcolor="#dbe8f6", fontcolor="black"];
+  }
+  n0 [label="velocidad\nsesgo -0,27", shape=doublecircle, fillcolor="#fbe3cc"];
+  n1 [label="giro\nsesgo -0,04", shape=doublecircle, fillcolor="#fbe3cc"];
+  n20 [label="oculta\nsesgo 0,02", shape=circle, fillcolor="#e6e6e6"];
+  i6 -> n0 [label="-0,41", color="#b22222", fontcolor="#b22222", penwidth=0.83];
+  i6 -> n1 [label="-0,10", color="#b22222", fontcolor="#b22222", penwidth=0.66];
+  i5 -> n1 [label="2,52", color="#1f5fa8", fontcolor="#1f5fa8", penwidth=2.00];
+  i4 -> n1 [label="0,91", color="#1f5fa8", fontcolor="#1f5fa8", penwidth=1.11];
+  i4 -> n20 [label="1,00", color="#1f5fa8", fontcolor="#1f5fa8", penwidth=1.16];
+  i3 -> n1 [label="-0,61", color="#b22222", fontcolor="#b22222", penwidth=0.94];
+  i2 -> n0 [label="0,74", color="#1f5fa8", fontcolor="#1f5fa8", penwidth=1.01];
+  i2 -> n1 [label="-2,05", color="#b22222", fontcolor="#b22222", penwidth=1.75];
+  i1 -> n0 [label="1,61", color="#1f5fa8", fontcolor="#1f5fa8", penwidth=1.50];
+  i1 -> n1 [label="-0,77", color="#b22222", fontcolor="#b22222", penwidth=1.03];
+  n20 -> n0 [label="-0,79", color="#b22222", fontcolor="#b22222", penwidth=1.04];
+}

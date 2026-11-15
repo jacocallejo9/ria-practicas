@@ -63,7 +63,7 @@ from collections import Counter
 
 import numpy as np
 
-from p2.p2_entrega.codigo_fuente.p1_protocolo import (RegistroEvaluacion, leer_episodios, metricas, agrupar,
+from p1_protocolo import (RegistroEvaluacion, leer_episodios, metricas, agrupar,
                           _texto_desenlaces)
 
 CONFIGURACIONES = ['C1', 'C2', 'C3', 'C4']
@@ -244,8 +244,8 @@ def imprimir_paradas(episodios):
 
 def politica_neat(args):
     import pickle
-    import p2.p2_entrega.codigo_fuente.p2_neat as P
-    from p2.p2_entrega.codigo_fuente.p1_comun import cargar_config
+    import p2_neat as P
+    from p1_comun import cargar_config
     run = args.run.rstrip('/\\')
     meta = P.leer_meta(run)
     version = P.version_de_meta(meta)
@@ -268,7 +268,7 @@ def politica_neat(args):
 def politica_p1(args):
     """Política de Stable-Baselines3 de la P1, con la configuración con la
     que se entrenó (config.json junto al modelo), como hace p1_seguidor.py."""
-    from p2.p2_entrega.codigo_fuente.p1_comun import cargar_config
+    from p1_comun import cargar_config
     from stable_baselines3 import PPO, SAC
     ruta = args.modelo_p1
     d = os.path.dirname(ruta.replace('.zip', ''))
@@ -295,14 +295,14 @@ def politica_p1(args):
 
 
 def elegir_politica(args):
-    from p2.p2_entrega.codigo_fuente.p1_comun import cargar_config
+    from p1_comun import cargar_config
     if args.run:
         return politica_neat(args)
     if args.modelo_p1:
         return politica_p1(args)
     cfg = cargar_config(args.config_p1)
     if args.manual:
-        import p2.p2_entrega.codigo_fuente.p2_neat as P
+        import p2_neat as P
         return P.controlador_manual(cfg), 'manual', cfg
     rng = np.random.default_rng(args.semilla)
     return (lambda obs: rng.uniform(-1.0, 1.0, 2).astype(np.float32)), 'aleatoria', cfg
@@ -319,9 +319,9 @@ def modo_evaluar(args):
     entrenamiento (salirse de la calzada, adelantar). La configuración del
     guía se fija a mano en RoboboSim; aquí sólo se anota.
     """
-    from p2.p2_entrega.codigo_fuente.p1_comun import fallo_protocolo
-    from p2.p2_entrega.codigo_fuente.p1_seguidor_env import RoboboSeguidorEnv
-    import p2.p2_entrega.codigo_fuente.p2_neat as P
+    from p1_comun import fallo_protocolo
+    from p1_seguidor_env import RoboboSeguidorEnv
+    import p2_neat as P
     politica, nombre, cfg = elegir_politica(args)
     P.asegurar_linea(cfg)
     p = cfg['protocolo']

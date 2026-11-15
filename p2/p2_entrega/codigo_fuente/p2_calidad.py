@@ -99,7 +99,7 @@ class Calidad:
 
 # ======================================================================
 if __name__ == '__main__':
-    from p2.p2_entrega.codigo_fuente.p1_comun import cargar_config
+    from p1_comun import cargar_config
     for f in ('A', 'B'):
         Q = Calidad(cargar_config(), f)
         print('=== Formulación {} ==='.format(f))

@@ -82,9 +82,9 @@ from itertools import count
 import numpy as np
 import neat
 
-from p2.p2_entrega.codigo_fuente.p1_comun import cargar_config
-from p2.p2_entrega.codigo_fuente.p2_calidad import Calidad
-from p2.p2_entrega.codigo_fuente.p2_registro import RegistroGeneracion, CONTADOR, ESTADO
+from p1_comun import cargar_config
+from p2_calidad import Calidad
+from p2_registro import RegistroGeneracion, CONTADOR, ESTADO
 
 P1_DIR = os.path.dirname(os.path.abspath(__file__))
 NOMBRES_SALIDA = ['v', 'w']
@@ -274,7 +274,7 @@ def comprobar_signo_x(minimo=15, abortar=False):
 
 
 def crear_env(cfg, n_pasos):
-    from p2.p2_entrega.codigo_fuente.p1_seguidor_env import RoboboSeguidorEnv
+    from p1_seguidor_env import RoboboSeguidorEnv
     return RoboboSeguidorEnv(config=cfg, modo='entrenamiento', pasos_max=n_pasos,
                              verbose=OPCIONES['detalle'])
 

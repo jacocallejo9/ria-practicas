@@ -67,10 +67,10 @@ try:
 except ImportError:
     MoveTilt = None
 
-from p2.p2_entrega.codigo_fuente.p1_comun import (cargar_config, ConvencionRumbo, LineaCentral, ModeloCamara,
+from p1_comun import (cargar_config, ConvencionRumbo, LineaCentral, ModeloCamara,
                       posicion_pelota, desviacion, angulo_hacia, envolver,
                       proximidad_ir, fallo_protocolo)
-from p2.p2_entrega.codigo_fuente.p1_recompensa import Recompensa
+from p1_recompensa import Recompensa
 
 AVISO_CONGELADO = (
     '*** El robot no se mueve aunque se le manda girar. Dos causas posibles:\n'
@@ -219,7 +219,7 @@ class RoboboSeguidorEnv(gym.Env):
         self._firma, self._t_cambio = None, time.time()      # para detectar el congelado
         self._ref_dir, self._dir_guia = None, None           # dirección de avance del guía
         if usar_simulador:
-            from p2.p2_entrega.codigo_fuente.p1_simulador import ClienteSim
+            from p1_simulador import ClienteSim
             self.cliente = ClienteSim(c.get('ip_simulador', 'host.docker.internal'),
                                       c['robot_seguidor'], c['objeto_guia'],
                                       c.get('objeto_pelota'))

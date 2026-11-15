@@ -166,7 +166,7 @@ class Recompensa:
 # =====================================================================
 
 if __name__ == '__main__':
-    from p2.p2_entrega.codigo_fuente.p1_comun import cargar_config
+    from p1_comun import cargar_config
 
     R = Recompensa(cargar_config())
     print('Separación d (m)   C_sep   Φ(d)')

@@ -1,0 +1,18 @@
+{
+  "etiqueta": "C2",
+  "formulacion": "A",
+  "n_pasos": 100,
+  "reinicio": "escena",
+  "calidad_media": 87.48256015259399,
+  "calidades": [
+    87.26851210623028,
+    87.27008789166487,
+    87.90908045988684
+  ],
+  "causas": [
+    "tiempo",
+    "tiempo",
+    "tiempo"
+  ],
+  "completados": 3
+}
